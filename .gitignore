@@ -1,0 +1,12 @@
+# Ignore everything
+*
+part2/__jac_gen__/
+
+# But not these files...
+!.gitignore
+!server.jac
+!client.jac
+!rag.jac
+
+# ...even if they are in subdirectories
+!*/
