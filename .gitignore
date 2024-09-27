@@ -7,6 +7,7 @@ part2/__jac_gen__/
 !server.jac
 !client.jac
 !rag.jac
+!README.md
 
 # ...even if they are in subdirectories
 !*/

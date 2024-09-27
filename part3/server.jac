@@ -6,15 +6,17 @@
 
 import:py from mtllm.llms {Ollama}
 
-# glob llm = Ollama(model_name='llama3.1'); # first LLM
-glob llm = Ollama(model_name='phi3');
+glob llm = Ollama(model_name='llama3.1'); # first LLM
+# glob llm = Ollama(model_name='phi3');
 
 import:jac from rag {RagEngine}
 glob rag_engine:RagEngine = RagEngine();
 
+# EXPLANATION: The added custom state is 'ST' which stands for small talk. It can be used in the chatbot to make small talk.
 enum ChatType {
     RAG : 'Need to use Retrievable information in specific documents to respond' = "RAG",
-    QA : 'Given context is enough for an answer' = "user_qa"
+    QA : 'Given context is enough for an answer' = "user_qa",
+    ST : 'Makes small talk with the users' = "ST"
 }
 
 node Router {
@@ -35,6 +37,7 @@ walker infer {
             router_node = here ++> Router();
             router_node ++> RagChat();
             router_node ++> QAChat();
+            router_node ++> STChat();
             visit router_node;
         }
     }
@@ -45,10 +48,30 @@ walker infer {
     }
 }
 
-node RagChat :Chat: {
-    has chat_type: ChatType = ChatType.RAG;
+# EXPLANATION. If the user makes small talk mentions things like 'how are you' or the weather, the chatbot goes to this ChatType
+node STChat :Chat: {
+    has chat_type: ChatType = ChatType.ST;
+
+    # print(classification, self.message);
 
     can respond with infer entry {
+        print("st");
+
+        can 'Respond to message using chat_history as context and agent_role as the goal of the agent'
+        respond_with_llm(   message:'current message':str,
+            chat_history: 'chat history':list[dict],
+            agent_role:'role of the agent responding':str
+                ) -> 'response':str by llm();
+        here.response = respond_with_llm(here.message, here.chat_history, agent_role="You are a conversation agent designed to make small talk with users like discussing the user's day and the weather");
+    }
+}
+
+node RagChat :Chat: {
+    has chat_type: ChatType = ChatType.RAG;
+    
+    can respond with infer entry {
+        print("rag");
+
         can 'Respond to message using chat_history as context and agent_role as the goal of the agent'
         respond_with_llm(   message:'current message':str,
                     chat_history: 'chat history':list[dict],
@@ -64,6 +87,8 @@ node QAChat :Chat: {
     has chat_type: ChatType = ChatType.QA;
 
     can respond with infer entry {
+        print("qa");
+
         can 'Respond to message using chat_history as context and agent_role as the goal of the agent'
         respond_with_llm(   message:'current message':str,
             chat_history: 'chat history':list[dict],
@@ -108,6 +133,7 @@ node Session {
 
         report {
             "response": response.response
+            # response.response
         };
     }
 }
